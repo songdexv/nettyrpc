@@ -56,7 +56,6 @@ public class ServiceDiscovery {
             }
         });
         try {
-            //cache.start();
             List<String> nodeList = client.getChildren().forPath(zkRegistryProperties.getDataPath());
             for (String node : nodeList) {
                 String serverUri = new String(client.getData().forPath(zkRegistryProperties.getDataPath() +
@@ -67,6 +66,7 @@ public class ServiceDiscovery {
                 }
             }
             ConnectionManager.getInstance().updateConnectedServer(serviceUriList);
+            cache.start();
         } catch (Exception e) {
             logger.error("start PathChildrenCache error", e);
         }

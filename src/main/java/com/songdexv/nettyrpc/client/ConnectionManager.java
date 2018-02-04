@@ -126,21 +126,19 @@ public class ConnectionManager {
                 bootstrap.group(eventLoopGroup).channel(NioSocketChannel.class).handler(new RpcClientInitializer());
                 try {
                     ChannelFuture future = bootstrap.connect(remoteAddress).sync();
-                    future.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
-                    logger.info("Successfully connect to remote server. remote peer = " + remoteAddress);
-                    RpcClientHandler handler = future.channel().pipeline().get(RpcClientHandler.class);
-                    addHandler(handler);
+                    future.addListener(new ChannelFutureListener() {
+                        @Override
+                        public void operationComplete(final ChannelFuture channelFuture) throws Exception {
+                            if (channelFuture.isSuccess()) {
+                                logger.info("Successfully connect to remote server. remote peer = " + remoteAddress);
+                                RpcClientHandler handler = future.channel().pipeline().get(RpcClientHandler.class);
+                                addHandler(handler);
+                            }
+                        }
+                    });
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-//                future.addListener(new ChannelFutureListener() {
-//                    @Override
-//                    public void operationComplete(final ChannelFuture channelFuture) throws Exception {
-//                        if (channelFuture.isSuccess()) {
-//
-//                        }
-//                    }
-//                });
             }
         });
     }
