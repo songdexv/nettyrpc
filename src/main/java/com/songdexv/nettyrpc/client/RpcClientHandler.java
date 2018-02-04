@@ -28,14 +28,14 @@ public class RpcClientHandler extends SimpleChannelInboundHandler<RpcResponse> {
 
     private volatile Channel channel;
 
-    private InetSocketAddress remotePeer;
+    private volatile InetSocketAddress remotePeer;
 
     public Channel getChannel() {
         return channel;
     }
 
     public InetSocketAddress getRemotePeer() {
-        return remotePeer;
+        return this.remotePeer;
     }
 
     public RPCFuture sendRequest(RpcRequest request) {
@@ -74,7 +74,7 @@ public class RpcClientHandler extends SimpleChannelInboundHandler<RpcResponse> {
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         super.channelActive(ctx);
-        this.remotePeer = (InetSocketAddress) channel.remoteAddress();
+        this.remotePeer = (InetSocketAddress) this.channel.remoteAddress();
     }
 
     @Override

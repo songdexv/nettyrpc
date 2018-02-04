@@ -1,4 +1,4 @@
-package com.songdexv.nettyrpc.registry;
+package com.songdexv.nettyrpc.server.registry;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

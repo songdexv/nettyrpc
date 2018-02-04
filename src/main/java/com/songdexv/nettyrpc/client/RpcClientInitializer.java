@@ -18,8 +18,8 @@ public class RpcClientInitializer extends ChannelInitializer<SocketChannel> {
     protected void initChannel(SocketChannel ch) throws Exception {
         ChannelPipeline pipeline = ch.pipeline();
         pipeline.addLast(new RpcDecoder(65536, 0, 4, 0, 4, RpcResponse.class));
-        pipeline.addLast(new RpcClientHandler());
         pipeline.addLast(new LengthFieldPrepender(4));
         pipeline.addLast(new RpcEncoder(RpcRequest.class));
+        pipeline.addLast(new RpcClientHandler());
     }
 }

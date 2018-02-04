@@ -12,8 +12,8 @@ public class ZkRegistryProperties {
     private String address;
     private String rootPath;
     private String dataPath;
-    private int sessionTimeout;
-    private int connectionTimeout;
+    private int sessionTimeout = 5000;
+    private int connectionTimeout = 5000;
 
     public String getAddress() {
         return address;

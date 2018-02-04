@@ -1,4 +1,4 @@
-package com.songdexv.nettyrpc.registry;
+package com.songdexv.nettyrpc.server.registry;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;

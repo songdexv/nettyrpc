@@ -22,7 +22,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 
 /**
@@ -42,13 +41,13 @@ public class ConnectionManager {
     }
 
     private CopyOnWriteArrayList<RpcClientHandler> connectedHandlers = new CopyOnWriteArrayList<>();
-    private Map<InetSocketAddress, RpcClientHandler> connectedServerNodes = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<InetSocketAddress, RpcClientHandler> connectedServerNodes = new ConcurrentHashMap<>();
 
     private ReentrantLock lock = new ReentrantLock();
     private Condition connected = lock.newCondition();
     private long connectTimeoutMillis = 6000;
     private AtomicInteger roundRobin = new AtomicInteger(0);
-    private volatile boolean isRuning = true;
+    private volatile boolean isRunning = true;
 
     private ConnectionManager() {
 
@@ -79,14 +78,14 @@ public class ConnectionManager {
                     }
                 }
                 for (InetSocketAddress serverNodeAddress : newServerNodeSet) {
-                    if (!connectedServerNodes.containsKey(serverNodeAddress)) {
+                    if (!connectedServerNodes.keySet().contains(serverNodeAddress)) {
                         connectServerNode(serverNodeAddress);
                     }
                 }
 
                 for (int i = 0; i < connectedHandlers.size(); ++i) {
                     RpcClientHandler connectedServerHandler = connectedHandlers.get(i);
-                    SocketAddress remotePeer = connectedServerHandler.getRemotePeer();
+                    InetSocketAddress remotePeer = connectedServerHandler.getRemotePeer();
                     if (!newServerNodeSet.contains(remotePeer)) {
                         logger.info("Remove invalid server node " + remotePeer);
                         RpcClientHandler handler = connectedServerNodes.get(remotePeer);
@@ -125,17 +124,23 @@ public class ConnectionManager {
             public void run() {
                 Bootstrap bootstrap = new Bootstrap();
                 bootstrap.group(eventLoopGroup).channel(NioSocketChannel.class).handler(new RpcClientInitializer());
-                ChannelFuture future = bootstrap.connect(remoteAddress);
-                future.addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
-                        if (future.isSuccess()) {
-                            logger.info("Successfully connect to remote server. remote peer = " + remoteAddress);
-                            RpcClientHandler handler = future.channel().pipeline().get(RpcClientHandler.class);
-                            addHandler(handler);
-                        }
-                    }
-                });
+                try {
+                    ChannelFuture future = bootstrap.connect(remoteAddress).sync();
+                    future.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+                    logger.info("Successfully connect to remote server. remote peer = " + remoteAddress);
+                    RpcClientHandler handler = future.channel().pipeline().get(RpcClientHandler.class);
+                    addHandler(handler);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+//                future.addListener(new ChannelFutureListener() {
+//                    @Override
+//                    public void operationComplete(final ChannelFuture channelFuture) throws Exception {
+//                        if (channelFuture.isSuccess()) {
+//
+//                        }
+//                    }
+//                });
             }
         });
     }
@@ -169,7 +174,7 @@ public class ConnectionManager {
         CopyOnWriteArrayList<RpcClientHandler> handlers =
                 (CopyOnWriteArrayList<RpcClientHandler>) this.connectedHandlers.clone();
         int size = handlers.size();
-        while (isRuning && size <= 0) {
+        while (isRunning && size <= 0) {
             try {
                 boolean available = waitingForHandler();
                 if (available) {
@@ -186,7 +191,7 @@ public class ConnectionManager {
     }
 
     public void stop() {
-        isRuning = false;
+        isRunning = false;
         for (int i = 0; i < connectedHandlers.size(); ++i) {
             RpcClientHandler connectedServerHandler = connectedHandlers.get(i);
             connectedServerHandler.close();

@@ -1,5 +1,8 @@
 package com.songdexv.nettyrpc.protocol;
 
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
+
 /**
  * Created by songdexv on 2018/2/1.
  */
@@ -34,5 +37,9 @@ public class RpcResponse {
 
     public boolean isError() {
         return error != null;
+    }
+
+    public String toString() {
+        return ToStringBuilder.reflectionToString(this, ToStringStyle.SIMPLE_STYLE);
     }
 }

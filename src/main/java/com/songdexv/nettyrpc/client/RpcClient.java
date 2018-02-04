@@ -1,18 +1,18 @@
 package com.songdexv.nettyrpc.client;
 
+import com.songdexv.nettyrpc.client.proxy.IAsyncObjectProxy;
+import com.songdexv.nettyrpc.client.proxy.ObjectProxy;
+import com.songdexv.nettyrpc.client.registry.ServiceDiscovery;
+
 import java.lang.reflect.Proxy;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import com.songdexv.nettyrpc.client.proxy.IAsyncObjectProxy;
-import com.songdexv.nettyrpc.client.proxy.ObjectProxy;
-import com.songdexv.nettyrpc.registry.ServiceDiscovery;
-
 /**
  * Created by songdexv on 2018/2/2.
  */
-public class RPCClient {
+public class RpcClient {
     private ServiceDiscovery serviceDiscovery;
 
     private static ThreadPoolExecutor threadPoolExecutor;
@@ -22,14 +22,17 @@ public class RPCClient {
                 new ThreadPoolExecutor(16, 16, 600L, TimeUnit.SECONDS, new ArrayBlockingQueue<Runnable>(65536));
     }
 
-    public RPCClient(ServiceDiscovery serviceDiscovery) {
+    public RpcClient() {
+
+    }
+
+    public RpcClient(ServiceDiscovery serviceDiscovery) {
         this.serviceDiscovery = serviceDiscovery;
     }
 
     public static <T> T createProxy(Class<T> interfaceClass) {
         return (T) Proxy
-                .newProxyInstance(interfaceClass.getClassLoader(), new Class[] {interfaceClass}, new ObjectProxy<>
-                        (interfaceClass));
+                .newProxyInstance(interfaceClass.getClassLoader(), new Class[]{interfaceClass}, new ObjectProxy<>(interfaceClass));
     }
 
     public static <T> IAsyncObjectProxy createAsyncProxy(Class<T> interfaceClass) {
@@ -40,10 +43,9 @@ public class RPCClient {
         threadPoolExecutor.submit(task);
     }
 
-    public void stop(){
+    public void stop() {
         threadPoolExecutor.shutdown();
         serviceDiscovery.stop();
         ConnectionManager.getInstance().stop();
     }
-
 }

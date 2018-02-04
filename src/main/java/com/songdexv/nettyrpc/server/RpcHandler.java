@@ -1,6 +1,7 @@
 package com.songdexv.nettyrpc.server;
 
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,15 +29,20 @@ public class RpcHandler extends SimpleChannelInboundHandler<RpcRequest> {
     }
 
     @Override
-    protected void channelRead0(final ChannelHandlerContext ctx, RpcRequest request) throws Exception {
+    protected void channelRead0(final ChannelHandlerContext ctx, final RpcRequest request) throws Exception {
         RpcServer.submit(new Runnable() {
             @Override
             public void run() {
                 logger.debug("-----receive request " + request.getRequestId());
+                if (request.getRequestId() == null) {
+                    return;
+                }
                 RpcResponse response = new RpcResponse();
                 response.setRequestId(request.getRequestId());
                 try {
+
                     Object result = handle(request);
+                    logger.debug("------ invoke result {}", result);
                     response.setResult(result);
                 } catch (Throwable t) {
                     response.setError(t.toString());
@@ -45,7 +51,9 @@ public class RpcHandler extends SimpleChannelInboundHandler<RpcRequest> {
                 ctx.writeAndFlush(response).addListener(new ChannelFutureListener() {
                     @Override
                     public void operationComplete(ChannelFuture future) throws Exception {
-                        logger.debug("Send response for request " + request.getRequestId());
+                        if (future.isSuccess()) {
+                            logger.debug("Send response for request " + request.getRequestId() + " succeed");
+                        }
                     }
                 });
             }
@@ -65,7 +73,6 @@ public class RpcHandler extends SimpleChannelInboundHandler<RpcRequest> {
         String methodName = request.getMethodName();
         Object[] parameters = request.getParameters();
         Class<?>[] parameterTypes = request.getParameterTypes();
-        logger.debug("------invoke " + className + "." + methodName);
         FastClass serviceFastClass = FastClass.create(serviceClass);
         FastMethod serviceFastMethod = serviceFastClass.getMethod(methodName, parameterTypes);
         return serviceFastMethod.invoke(serviceBean, parameters);

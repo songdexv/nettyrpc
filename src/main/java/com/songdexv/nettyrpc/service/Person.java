@@ -1,4 +1,4 @@
-package com.songdexv.nettyrpc.service.model;
+package com.songdexv.nettyrpc.service;
 
 /**
  * Created by songdexv on 2018/2/2.

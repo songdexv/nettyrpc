@@ -1,4 +1,4 @@
-package com.songdexv.nettyrpc.registry;
+package com.songdexv.nettyrpc.client.registry;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,29 +35,38 @@ public class ServiceDiscovery {
         client = CuratorFrameworkFactory.newClient(zkRegistryProperties.getAddress(), zkRegistryProperties
                 .getSessionTimeout(), zkRegistryProperties.getConnectionTimeout(), retryPolicy);
         client.start();
-        PathChildrenCache cache = new PathChildrenCache(client, zkRegistryProperties.getDataPath(), true);
+        PathChildrenCache cache = new PathChildrenCache(client, zkRegistryProperties.getDataPath(), false);
         cache.getListenable().addListener(new PathChildrenCacheListener() {
             @Override
             public void childEvent(CuratorFramework curatorFramework, PathChildrenCacheEvent pathChildrenCacheEvent)
                     throws Exception {
-                logger.info(zkRegistryProperties.getDataPath() + " child nodes changed");
+                logger.info(zkRegistryProperties.getDataPath() + " child nodes changed, event type {}", pathChildrenCacheEvent.getType());
                 List<String> dataList = new ArrayList<>();
                 List<String> nodeList = curatorFramework.getChildren().forPath(zkRegistryProperties.getDataPath());
                 for (String node : nodeList) {
-                    dataList.add(new String(curatorFramework.getData().forPath(zkRegistryProperties.getDataPath() +
-                            "/" + node)));
+                    String serverUri = new String(client.getData().forPath(zkRegistryProperties.getDataPath() +
+                            "/" + node));
+                    if (serverUri.length() > 0) {
+                        logger.info("---- find server {}", serverUri);
+                        dataList.add(serverUri);
+                    }
                 }
                 serviceUriList = dataList;
                 ConnectionManager.getInstance().updateConnectedServer(serviceUriList);
             }
         });
         try {
-            cache.start();
+            //cache.start();
             List<String> nodeList = client.getChildren().forPath(zkRegistryProperties.getDataPath());
             for (String node : nodeList) {
-                serviceUriList.add(new String(client.getData().forPath(zkRegistryProperties.getDataPath() +
-                        "/" + node)));
+                String serverUri = new String(client.getData().forPath(zkRegistryProperties.getDataPath() +
+                        "/" + node));
+                if (serverUri.length() > 0) {
+                    logger.info("---- find server {}", serverUri);
+                    serviceUriList.add(serverUri);
+                }
             }
+            ConnectionManager.getInstance().updateConnectedServer(serviceUriList);
         } catch (Exception e) {
             logger.error("start PathChildrenCache error", e);
         }

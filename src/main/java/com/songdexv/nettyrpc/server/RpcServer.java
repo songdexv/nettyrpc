@@ -21,7 +21,7 @@ import com.songdexv.nettyrpc.protocol.RpcDecoder;
 import com.songdexv.nettyrpc.protocol.RpcEncoder;
 import com.songdexv.nettyrpc.protocol.RpcRequest;
 import com.songdexv.nettyrpc.protocol.RpcResponse;
-import com.songdexv.nettyrpc.registry.ServiceRegistry;
+import com.songdexv.nettyrpc.server.registry.ServiceRegistry;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
@@ -61,8 +61,8 @@ public class RpcServer implements ApplicationRunner, ApplicationContextAware {
                         @Override
                         protected void initChannel(SocketChannel ch) throws Exception {
                             ch.pipeline().addLast(new RpcDecoder(65536, 0, 4, 0, 4, RpcRequest.class))
-                                    .addLast(new RpcHandler(handlerMap)).addLast(new LengthFieldPrepender(4)).addLast(new
-                                    RpcEncoder(RpcResponse.class));
+                                    .addLast(new LengthFieldPrepender(4)).addLast(new
+                                    RpcEncoder(RpcResponse.class)).addLast(new RpcHandler(handlerMap));
                         }
                     }).option(ChannelOption.SO_BACKLOG, 128).childOption(ChannelOption.SO_KEEPALIVE, true);
             String[] array = rpcServerAddress.split(":");
@@ -85,7 +85,7 @@ public class RpcServer implements ApplicationRunner, ApplicationContextAware {
         if (serviceBeanMap != null) {
             for (Object serviceBean : serviceBeanMap.values()) {
                 String interfaceName = serviceBean.getClass().getAnnotation(RpcService.class).value().getName();
-                logger.info("loading service: {}", interfaceName);
+                logger.info("------------loading service: {}, {}", interfaceName, serviceBean);
                 handlerMap.put(interfaceName, serviceBean);
             }
         }
@@ -93,7 +93,7 @@ public class RpcServer implements ApplicationRunner, ApplicationContextAware {
 
     public static void submit(Runnable task) {
         if (threadPoolExecutor == null) {
-            synchronized(threadPoolExecutor) {
+            synchronized (RpcServer.class) {
                 if (threadPoolExecutor == null) {
                     threadPoolExecutor = new ThreadPoolExecutor(16, 16, 600L, TimeUnit.SECONDS, new
                             ArrayBlockingQueue<Runnable>(65536), new ThreadPoolExecutor.AbortPolicy());
@@ -105,7 +105,7 @@ public class RpcServer implements ApplicationRunner, ApplicationContextAware {
 
     public RpcServer addService(String interfaceName, Object serviceBean) {
         if (!handlerMap.containsKey(interfaceName)) {
-            logger.info("Loading service: {}", interfaceName);
+            logger.info("-------------Loading service: {}", interfaceName);
             handlerMap.put(interfaceName, serviceBean);
         }
         return this;
